@@ -1,13 +1,12 @@
-import express, { Router } from "express";
+import { Router } from "express";
+import * as reviewController from "./review.controller";
 import auth, { UserRole } from "../../middleware/auth";
-import { reviewController } from "./review.controller";
-const router = express.Router()
-router.post(
-  "/review",
-  auth(UserRole.CUSTOMER),
- reviewController.createReview
-);
-router.get("/allReview",reviewController.getAllReview)
-router.get("/top-rated", reviewController.getTopRatedMeals);
+
+const router = Router();
+
+router.get("/:ideaId", reviewController.getReviewsByIdea);
+router.post("/", auth(UserRole.MEMBER, UserRole.ADMIN), reviewController.addReview);
+
+export default router;
 
 export const reviewRouter: Router = router;

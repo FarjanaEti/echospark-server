@@ -1,80 +1,29 @@
 import { prisma } from "../../lib/prisma";
 
-type CreateReviewInput = {
- userId: string;
-  mealId: string;
+export const addReview = async (data: {
   rating: number;
-  comment?: string;
-};
-
-const createReview = async (data: CreateReviewInput) => {
-  const orderItem = await prisma.orderItem.findFirst({
-    where: {
-      mealId: data.mealId,
-      order: {
-        customerId: data.userId,
-        status: "DELIVERED",
-      },
-    },
-  });
-
-  if (!orderItem) {
-    throw new Error("You can only review meals from delivered orders");
-  }
-
-  const existing = await prisma.review.findFirst({
-    where: {
-      userId: data.userId,
-      mealId: data.mealId,
-    },
-  });
-
-  if (existing) {
-    throw new Error("You already reviewed this meal");
-  }
-
-  return prisma.review.create({
-    data: {
-      rating: data.rating,
-      comment: data.comment ?? null, // ← fix: undefined → null
-      user: { connect: { id: data.userId } },   // ← fix: use connect
-      meal: { connect: { id: data.mealId } },   // ← fix: use connect
-    },
+  experience: string;
+  userId: string;
+  ideaId: string;
+}) => {
+  return prisma.review.upsert({
+    where: { userId_ideaId: { userId: data.userId, ideaId: data.ideaId } },
+    update: { rating: data.rating, experience: data.experience },
+    create: data,
   });
 };
 
-const getAllReview = async () => {
+export const getReviewsByIdea = async (ideaId: string) => {
   return prisma.review.findMany({
-    orderBy: { createdAt: "asc" },
+    where: { ideaId },
+    include: {
+      user: { select: { id: true, name: true, profileImage: true } },
+    },
+    orderBy: { createdAt: "desc" },
   });
-};
-
-const getTopRatedMeals = async () => {
-  const meals = await prisma.review.groupBy({
-    by: ["mealId"],
-    _avg: { rating: true },
-    _count: { rating: true },
-    orderBy: { _avg: { rating: "desc" } },
-    take: 10,
-  });
-
-  // Get meal details for each
-  const mealIds = meals.map((m) => m.mealId);
-  const mealDetails = await prisma.meal.findMany({
-    where: { id: { in: mealIds } },
-    select: { id: true, title: true, price: true, image: true, description: true, },
-  });
-
-  return meals.map((m) => ({
-    mealId: m.mealId,
-    avgRating: Math.round((m._avg.rating ?? 0) * 10) / 10,
-    reviewCount: m._count.rating,
-    meal: mealDetails.find((d) => d.id === m.mealId),
-  }));
 };
 
 export const reviewServices = {
-  createReview,
-  getAllReview,
-  getTopRatedMeals, 
+ getReviewsByIdea,
+ addReview
 };

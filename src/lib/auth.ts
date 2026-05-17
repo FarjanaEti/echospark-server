@@ -1,31 +1,20 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./prisma";
-import nodemailer from "nodemailer"
 
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false, 
-  auth: {
-    user: process.env.APP_USER,
-    pass: process.env.APP_PASS,
-  },
-});
-//localhost
 const isProduction = process.env.NODE_ENV === "production";
 
 export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET!,
-  database: prismaAdapter(prisma, {
-    provider: "postgresql", 
-  }),
-  
   baseURL: process.env.BETTER_AUTH_URL,
+
+  database: prismaAdapter(prisma, {
+    provider: "postgresql",
+  }),
+
   trustedOrigins: [
-    "https://assignment4-client-lilac.vercel.app",
+    process.env.APP_URL || "http://localhost:3000",
     "https://*.vercel.app",
-    "http://localhost:3000"
   ],
 
   cookies: {
@@ -33,9 +22,7 @@ export const auth = betterAuth({
       name: "better-auth.session_token",
       attributes: {
         httpOnly: true,
-        // sameSite: "none",
-        // secure: true,
-         sameSite: isProduction ? "none" : "lax",  
+        sameSite: isProduction ? "none" : "lax",
         secure: isProduction,
         path: "/",
       },
@@ -43,81 +30,65 @@ export const auth = betterAuth({
   },
 
   session: {
-    cookieCache: {
-      enabled: true,
-      maxAge: 0,
-    },
-    expiresIn: 60 * 60 * 24 * 7, 
+    expiresIn: 60 * 60 * 24 * 7, // 7 days
   },
 
   advanced: {
     cookiePrefix: "better-auth",
-    useSecureCookies: process.env.NODE_ENV === "production",
-    crossSubDomainCookies: {
-      enabled: false,
-    },
-    disableCSRFCheck: true, 
+    useSecureCookies: isProduction,
+    disableCSRFCheck: true,
   },
 
   user: {
- 
-    fields: {
-    emailVerified: "emailVerified",
-        },
-
+    
+  fields: {
+    image: "profileImage", 
+  },
     additionalFields: {
       role: {
         type: "string",
-        defaultValue: "CUSTOMER",
-        required: false
+        defaultValue: "MEMBER",
+        required: false,
+        input: true,
+      },
+     
+      bio: {
+        type: "string",
+        required: false,
+          input: true,
+      },
+      isActive: {
+        type: "boolean",
+        defaultValue: true,
+        required: false,
+          input: true,
       },
       phone: {
-        type: "string",
-        required: false
-      },
-      
+      type: "string",
+      required: false,
+      input: true,
     }
+    },
   },
 
-  
-
-  emailAndPassword: { 
-    enabled: true, 
+  emailAndPassword: {
+    enabled: true,
     autoSignIn: false,
-    requireEmailVerification: false
-  }, 
+     requireEmailVerification: false,
+  },
 
-   emailVerification: {
-        sendOnSignUp: false,
-    },
-
-    databaseHooks: {
-        user: {
-            create: {
-                before: async (user) => {
-                  console.log("Creating user, forcing emailVerified to true...")
-                    return {
-                        data: {
-                            ...user,
-                            emailVerified: true,
-                        },
-                    };
-                },
+  databaseHooks: {
+    user: {
+      create: {
+        before: async (user) => {
+          return {
+            data: {
+              ...user,
+               emailVerified: true,
             },
+          };
         },
-    },
-
-  socialProviders: {
-    google: {
-      prompt: "select_account consent",
-      accessType: "offline",
-      clientId: process.env.GOOGLE_CLIENT_ID as string,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
-      scope: ["email", "profile", "openid"],
-      skipStateCookieCheck: true,
-      redirectURI: "https://assignment4-backend-red.vercel.app/api/auth/callback/google",
-      
+      },
     },
   },
-  
 });

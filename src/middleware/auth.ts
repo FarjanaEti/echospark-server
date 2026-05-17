@@ -1,14 +1,11 @@
 import { NextFunction, Request, Response } from "express";
-import { auth as betterAuth } from '../lib/auth'
-import { prisma } from "../lib/prisma";
+import { auth as betterAuth } from "../lib/auth";
 import { fromNodeHeaders } from "better-auth/node";
 
 export enum UserRole {
-  CUSTOMER = "CUSTOMER",
-  PROVIDER = "PROVIDER",
+  MEMBER = "MEMBER",
   ADMIN = "ADMIN",
 }
-
 
 declare global {
   namespace Express {
@@ -18,72 +15,44 @@ declare global {
         email: string;
         name: string;
         role: string;
-        emailVerified: boolean;
-         providerProfile?: {
-      id: string;
-    };
-      }
+      };
     }
   }
 }
 
 const auth = (...roles: UserRole[]) => {
-    return async (req: Request, res: Response, next: NextFunction) => {
-        try {
-
-            // get user session
-           const headers = fromNodeHeaders(req.headers);
-         
-
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
       const session = await betterAuth.api.getSession({
-        headers,   
+        headers: fromNodeHeaders(req.headers),
       });
-          
-            if (!session) {
-                return res.status(401).json({
-                    success: false,
-                    message: "You are not authorized!"
-                })
-            }
-            
 
-            
-            const user: Request["user"] = {
-             id: session.user.id,
-             email: session.user.email,
-             name: session.user.name,
-             role: session.user.role as UserRole,
-             emailVerified: session.user.emailVerified,
-                };
+      if (!session) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized!",
+        });
+      }
 
+      req.user = {
+        id: session.user.id,
+        email: session.user.email,
+        name: session.user.name,
+        role: session.user.role as string,
+      };
 
-      
-      if (user.role === UserRole.PROVIDER) {
-  const profile = await prisma.providerProfile.findUnique({
-    where: { userId: user.id },
-    select: { id: true },
-  });
+      if (roles.length && !roles.includes(req.user.role as UserRole)) {
+        return res.status(403).json({
+          success: false,
+          message: "Forbidden!",
+        });
+      }
 
-  if (profile) {
-    user.providerProfile = { id: profile.id };
-  }
-}
-
-      req.user = user;
-       
-            if (roles.length && !roles.includes(req.user.role as UserRole)) {
-                return res.status(403).json({
-                    success: false,
-                    message: "Forbidden! You don't have permission to access this resources!"
-                })
-            }
-
-            next()
-        } catch (err) {
-            next(err);
-        }
-
+      next();
+    } catch (err) {
+      next(err);
     }
+  };
 };
 
 export default auth;

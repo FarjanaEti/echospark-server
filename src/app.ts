@@ -1,80 +1,72 @@
-import express, { Application } from "express";
-import { MealRouter } from "./modules/menu/menu.route";
-import { toNodeHandler } from "better-auth/node";
+import express, { Application, Request, Response } from "express";
+import cors from "cors";
 import { auth } from "./lib/auth";
-import cors from 'cors';
-import { providerRouter } from "./modules/provider/provider.route";
+import { toNodeHandler } from "better-auth/node";
 import { categoryRouter } from "./modules/category/category.route";
-import { orderRouter } from "./modules/order/order.route";
-import { userRouter } from "./modules/allUser/user.route";
-import { cartRouter } from "./modules/cart/cart.route";
+import { VoteRouter } from "./modules/vote/vote.route";
+import { commentRouter } from "./modules/comment/comment.route";
 import { reviewRouter } from "./modules/review/review.route";
-import paymentRouter from "./modules/payment/payment.route";
-
+import { userRouter } from "./modules/user/user.route";
+import { ideaRouter } from "./modules/idea/idea.route";
 
 const app: Application = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
+// ─── Allowed Origins ────────────────────────
 const allowedOrigins = [
   process.env.APP_URL || "http://localhost:3000",
   process.env.PROD_APP_URL,
 ].filter(Boolean);
 
 
+// ─── Open CORS for SSLCommerz callbacks ─────
 const openCors = cors({ origin: "*" });
 app.post("/payment/success", openCors, (req, res, next) => next());
 app.post("/payment/fail", openCors, (req, res, next) => next());
 app.post("/payment/cancel", openCors, (req, res, next) => next());
 
+// ─── Main CORS ───────────────────────────────
 app.use(
   cors({
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
-
       const isAllowed =
         allowedOrigins.includes(origin) ||
-        /^https:\/\/next-blog-client.*\.vercel\.app$/.test(origin) ||
         /^https:\/\/.*\.vercel\.app$/.test(origin) ||
-        /^https:\/\/.*\.sslcommerz\.com$/.test(origin); 
-
+        /^https:\/\/.*\.sslcommerz\.com$/.test(origin);
       if (isAllowed) {
         callback(null, true);
       } else {
-         console.log("Blocked origin:", origin);
+        console.log("Blocked origin:", origin);
         callback(null, false);
       }
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
-    exposedHeaders: ["Set-Cookie"],
-  }),
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
 );
-
 
 app.set("trust proxy", 1);
 
-app.use('/api/auth', toNodeHandler(auth));
+// ─── Routes will go here ─────────────────────
+app.use("/api/auth/", toNodeHandler(auth));
 
+// ─── Body Parsers ───────────────────────────
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-app.use("/provider/meals", MealRouter);
-app.use("/category", categoryRouter);
-app.use("/provider", providerRouter);
-app.use("/order", orderRouter);
-app.use("/admin", userRouter);
-app.use("/customer", cartRouter);
-app.use("/customer", reviewRouter);
-app.use("/payment", paymentRouter);
+// app.use("/api/auth", authRouter);
+app.use("/api/users", userRouter);
+app.use("/api/ideas", ideaRouter);
+ app.use("/api/categories", categoryRouter);
+ app.use("/api/votes", VoteRouter);
+ app.use("/api/comments", commentRouter);
+// app.use("/api/payments", paymentRouter);
+ app.use("/api/reviews", reviewRouter);
 
-app.get("/", (req, res) => {
-    res.send("Hello, World!");
+// ─── Health Check ────────────────────────────
+app.get("/", (req: Request, res: Response) => {
+  res.send("EcoSpark Hub API is running 🌱");
 });
+
 export default app;
-
-
-
-
-// tarpor je user purchase korlo se kon product purchase
-//  korlo setar ekta table and total koto takar purchase 
-// korlo eisob ektu din tahole overall ekta pattern hobe

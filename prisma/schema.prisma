@@ -7,153 +7,207 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Role {
+  MEMBER
+  ADMIN
+}
+
+enum IdeaStatus {
+  DRAFT
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum VoteType {
+  UPVOTE
+  DOWNVOTE
+}
+
+// ─────────────────────────────────────────────
+// USER
+// ─────────────────────────────────────────────
+
 model User {
-  id              String           @id @default(uuid())
-  name            String
-  email           String           @unique
-  role            UserRole         @default(CUSTOMER)
-  status          UserStatus       @default(ACTIVE)
-  phone           String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  emailVerified   Boolean          @default(true)
-  image           String?
-  accounts        Account[]
-  orders          Order[]
-  providerProfile ProviderProfile?
-  reviews         Review[]
-  sessions        Session[]
-  carts           Cart[]
+  id            String   @id @default(uuid())
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  password      String?
+  role          Role     @default(MEMBER)
+  profileImage  String?
+  bio           String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  @@map("users")
+  ideas     Idea[]
+  votes     Vote[]
+  comments  Comment[]
+  payments  Payment[]
+  reviews   Review[]
+  watchlist Watchlist[]
+  sessions  Session[]
+  accounts  Account[]
 }
 
-model ProviderProfile {
-  id             String   @id @default(uuid())
-  userId         String   @unique
-  restaurantName String
-  address        String
-  phone          String
-  description    String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  meals          Meal[]
-  orders         Order[]
-  user           User     @relation(fields: [userId], references: [id])
-
-  @@map("provider_profiles")
-}
+// ─────────────────────────────────────────────
+// CATEGORY
+// ─────────────────────────────────────────────
 
 model Category {
   id        String   @id @default(uuid())
   name      String   @unique
-  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
-  meals     Meal[]
 
-  @@map("categories")
+  ideas Idea[]
 }
 
-model Meal {
-  id          String  @id @default(uuid())
-  title       String
-  description String?
-  price       Float
-  image       String?
-  available   Boolean @default(true)
+// ─────────────────────────────────────────────
+// IDEA
+// ─────────────────────────────────────────────
 
-  cuisine  String?
-  dietType String?
+model Idea {
+  id                String     @id @default(uuid())
+  title             String
+  problemStatement  String
+  proposedSolution  String
+  description       String
+  images            String[]
+  isPaid            Boolean    @default(false)
+  price             Float?
+  status            IdeaStatus @default(DRAFT)
+  rejectionFeedback String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
 
-  providerId String
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id])
+
   categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
 
+  votes     Vote[]
+  comments  Comment[]
+  payments  Payment[]
+  reviews   Review[]
+  watchlist Watchlist[]
+}
+
+// ─────────────────────────────────────────────
+// VOTE
+// ─────────────────────────────────────────────
+
+model Vote {
+  id        String   @id @default(uuid())
+  type      VoteType
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  ideaId String
+  idea   Idea   @relation(fields: [ideaId], references: [id])
+
+  @@unique([userId, ideaId])
+}
+
+// ─────────────────────────────────────────────
+// COMMENT (Nested-ready via parentId)
+// ─────────────────────────────────────────────
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  isDeleted Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  category Category        @relation(fields: [categoryId], references: [id])
-  provider ProviderProfile @relation(fields: [providerId], references: [id])
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 
-  orderItems OrderItem[]
-  reviews    Review[]
-  cartItems  CartItem[]
+  ideaId String
+  idea   Idea   @relation(fields: [ideaId], references: [id])
 
-  @@map("meals")
+  // Optional: for nested replies in the future
+  parentId String?
+  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies  Comment[] @relation("CommentReplies")
 }
 
-model Cart {
+// ─────────────────────────────────────────────
+// PAYMENT
+// ─────────────────────────────────────────────
+
+model Payment {
+  id              String   @id @default(uuid())
+  amount          Float
+  currency        String   @default("BDT")
+  status          String   @default("PENDING") // PENDING, SUCCESS, FAILED
+  transactionId   String?  @unique
+  gatewayResponse Json?
+  createdAt       DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  ideaId String
+  idea   Idea   @relation(fields: [ideaId], references: [id])
+
+  @@unique([userId, ideaId])
+}
+
+// ─────────────────────────────────────────────
+// REVIEW (User experience/rating on an idea)
+// ─────────────────────────────────────────────
+
+model Review {
   id         String   @id @default(uuid())
-  userId     String
-  providerId String
+  rating     Int // 1–10
+  experience String
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  items CartItem[]
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 
-  customer User @relation(fields: [userId], references: [id])
+  ideaId String
+  idea   Idea   @relation(fields: [ideaId], references: [id])
+
+  @@unique([userId, ideaId])
 }
 
-model CartItem {
-  id       String   @id @default(uuid())
-  cartId   String
-  mealId   String
-  quantity Int
-  subtotal Decimal? @db.Decimal(10, 2)
-  cart     Cart     @relation(fields: [cartId], references: [id])
-  meal     Meal     @relation(fields: [mealId], references: [id])
+// ─────────────────────────────────────────────
+// WATCHLIST / FAVORITES
+// ─────────────────────────────────────────────
 
-  @@unique([cartId, mealId])
-}
-
-model Order {
-  id            String        @id @default(uuid())
-  customerId    String
-  providerId    String
-  //ass-5
-  status        OrderStatus   @default(PENDING) // 🔥 changed
-  paymentMethod PaymentMethod
-  paymentStatus PaymentStatus @default(PENDING)
-
-  transactionId String?
-  //
-  address       String
-  totalAmount   Float
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  items         OrderItem[]
-  customer      User            @relation(fields: [customerId], references: [id])
-  provider      ProviderProfile @relation(fields: [providerId], references: [id])
-
-  @@map("orders")
-}
-
-model OrderItem {
-  id       String @id @default(uuid())
-  orderId  String
-  mealId   String
-  quantity Int
-  price    Float
-  meal     Meal   @relation(fields: [mealId], references: [id])
-  order    Order  @relation(fields: [orderId], references: [id])
-
-  @@map("order_items")
-}
-
-model Review {
+model Watchlist {
   id        String   @id @default(uuid())
-  rating    Int
-  comment   String?
-  userId    String
-  mealId    String
   createdAt DateTime @default(now())
-  meal      Meal     @relation(fields: [mealId], references: [id])
-  user      User     @relation(fields: [userId], references: [id])
 
-  @@unique([userId, mealId])
-  @@map("reviews")
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  ideaId String
+  idea   Idea   @relation(fields: [ideaId], references: [id])
+
+  @@unique([userId, ideaId])
 }
 
-//ass-5
+// ─────────────────────────────────────────────
+// NEWSLETTER
+// ─────────────────────────────────────────────
+
+model Newsletter {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  subscribedAt DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────
+// BETTER AUTH REQUIRED TABLES
+// ─────────────────────────────────────────────
 
 model Session {
   id        String   @id
@@ -165,9 +219,6 @@ model Session {
   userAgent String?
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@map("session")
 }
 
 model Account {
@@ -175,6 +226,7 @@ model Account {
   accountId             String
   providerId            String
   userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   accessToken           String?
   refreshToken          String?
   idToken               String?
@@ -184,10 +236,6 @@ model Account {
   password              String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@map("account")
 }
 
 model Verification {
@@ -197,39 +245,4 @@ model Verification {
   expiresAt  DateTime
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-
-  @@index([identifier])
-  @@map("verification")
-}
-
-enum UserRole {
-  CUSTOMER
-  PROVIDER
-  ADMIN
-}
-
-enum UserStatus {
-  ACTIVE
-  SUSPENDED
-}
-
-enum OrderStatus {
-  PENDING
-  PLACED
-  PREPARING
-  READY
-  DELIVERED
-  CANCELLED
-}
-
-//ass-5
-enum PaymentMethod {
-  COD
-  ONLINE
-}
-
-enum PaymentStatus {
-  PENDING
-  PAID
-  FAILED
 }
