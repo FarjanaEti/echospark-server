@@ -8,7 +8,7 @@ const router = Router();
 router.get("/", categoryController.getAllCategories);
 
 // admin only
-router.post("/", auth(UserRole.ADMIN), categoryController.createCategory);
+router.post("/",  categoryController.createCategory);
 router.delete("/:id", auth(UserRole.ADMIN), categoryController.deleteCategory);
 
 export default router;

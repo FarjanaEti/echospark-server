@@ -59,6 +59,7 @@ model User {
 model Category {
   id        String   @id @default(uuid())
   name      String   @unique
+  scale     String?
   createdAt DateTime @default(now())
 
   ideas Idea[]

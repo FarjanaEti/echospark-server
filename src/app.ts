@@ -51,6 +51,7 @@ app.set("trust proxy", 1);
 // ─── Routes will go here ─────────────────────
 app.use("/api/auth/", toNodeHandler(auth));
 
+
 // ─── Body Parsers ───────────────────────────
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

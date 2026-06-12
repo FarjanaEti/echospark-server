@@ -1,11 +1,10 @@
 import { prisma } from "../../lib/prisma";
 
-export const createCategory = async (name: string) => {
+export const createCategory = async (name: string, scale?: string) => {
   return prisma.category.create({
-    data: { name },
+    data: { name, scale: scale ?? null },
   });
 };
-
 export const getAllCategories = async () => {
   return prisma.category.findMany({
     orderBy: { createdAt: "asc" },

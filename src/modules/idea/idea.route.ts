@@ -10,7 +10,7 @@ router.get("/:id", ideaController.getIdeaById);
 
 // member
 router.post("/", auth(UserRole.MEMBER, UserRole.ADMIN), ideaController.createIdea);
-router.get("/my/ideas", auth(UserRole.MEMBER, UserRole.ADMIN), ideaController.getMemberIdeas);
+router.get("/my/idea", auth(UserRole.MEMBER, UserRole.ADMIN), ideaController.getMemberIdeas);
 router.patch("/:id", auth(UserRole.MEMBER, UserRole.ADMIN), ideaController.updateIdea);
 router.delete("/:id", auth(UserRole.MEMBER, UserRole.ADMIN), ideaController.deleteIdea);
 router.patch("/:id/submit", auth(UserRole.MEMBER, UserRole.ADMIN), ideaController.submitIdea);

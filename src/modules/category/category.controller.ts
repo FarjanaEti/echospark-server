@@ -4,8 +4,8 @@ import { categoryService } from "./category.services";
 
 export const createCategory = async (req: Request, res: Response) => {
   try {
-    const { name } = req.body;
-    const category = await categoryService.createCategory(name);
+    const { name, scale } = req.body;
+const category = await categoryService.createCategory(name, scale);
     res.status(201).json({ success: true, data: category });
   } catch (err) {
     res.status(500).json({ success: false, message: "Failed to create category" });
