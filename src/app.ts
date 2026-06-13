@@ -8,6 +8,7 @@ import { commentRouter } from "./modules/comment/comment.route";
 import { reviewRouter } from "./modules/review/review.route";
 import { userRouter } from "./modules/user/user.route";
 import { ideaRouter } from "./modules/idea/idea.route";
+import {aiRouter} from "./modules/ai/ai.route";
 
 const app: Application = express();
 
@@ -64,6 +65,8 @@ app.use("/api/ideas", ideaRouter);
  app.use("/api/comments", commentRouter);
 // app.use("/api/payments", paymentRouter);
  app.use("/api/reviews", reviewRouter);
+
+app.use("/api/ai", aiRouter);
 
 // ─── Health Check ────────────────────────────
 app.get("/", (req: Request, res: Response) => {
