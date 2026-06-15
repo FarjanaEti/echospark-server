@@ -1,5 +1,5 @@
 import { prisma } from "../../lib/prisma";
-import { IdeaStatus } from "@prisma/client";
+
 
 export const createIdea = async (data: {
   title: string;
@@ -16,10 +16,22 @@ export const createIdea = async (data: {
 };
 
 export const submitIdea = async (id: string, authorId: string) => {
-  return prisma.idea.update({
-    where: { id, authorId, status: "DRAFT" },
-    data: { status: "UNDER_REVIEW" },
+  const result = await prisma.idea.updateMany({
+    where: {
+      id,
+      authorId,
+      status: "DRAFT",
+    },
+    data: {
+      status: "UNDER_REVIEW",
+    },
   });
+
+  if (result.count === 0) {
+    throw new Error("Idea not found or not allowed to submit");
+  }
+
+  return result;
 };
 
 export const getAllApprovedIdeas = async (filters: {
