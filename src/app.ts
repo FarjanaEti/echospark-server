@@ -9,6 +9,7 @@ import { reviewRouter } from "./modules/review/review.route";
 import { userRouter } from "./modules/user/user.route";
 import { ideaRouter } from "./modules/idea/idea.route";
 import {aiRouter} from "./modules/ai/ai.route";
+import { communityRouter } from "./modules/community/community.routes";
 
 const app: Application = express();
 
@@ -65,6 +66,7 @@ app.use("/api/ideas", ideaRouter);
  app.use("/api/comments", commentRouter);
 // app.use("/api/payments", paymentRouter);
  app.use("/api/reviews", reviewRouter);
+ app.use("/api/communities", communityRouter);
 
 app.use("/api/ai", aiRouter);
 

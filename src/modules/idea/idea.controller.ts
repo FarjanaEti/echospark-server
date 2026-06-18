@@ -154,7 +154,7 @@ export const adminDeleteIdea = async (req: Request<SubmitIdeaParams>, res: Respo
     res.status(500).json({ success: false, message: "Failed to delete idea" });
   }
 };
-export const cartController={
+export const ideaController={
   createIdea,
   submitIdea,
   adminDeleteIdea,

@@ -42,14 +42,16 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  ideas     Idea[]
-  votes     Vote[]
-  comments  Comment[]
-  payments  Payment[]
-  reviews   Review[]
-  watchlist Watchlist[]
-  sessions  Session[]
-  accounts  Account[]
+  ideas                Idea[]
+  votes                Vote[]
+  comments             Comment[]
+  payments             Payment[]
+  reviews              Review[]
+  watchlist            Watchlist[]
+  sessions             Session[]
+  accounts             Account[]
+  createdCommunities   Community[]       @relation("CommunityCreator")
+  communityMemberships CommunityMember[] @relation("CommunityMemberships")
 }
 
 // ─────────────────────────────────────────────
@@ -246,4 +248,47 @@ model Verification {
   expiresAt  DateTime
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+}
+
+// ########################
+model Community {
+  id             String            @id @default(cuid())
+  name           String
+  location       String
+  description    String
+  membershipType MembershipType    @default(OPEN)
+  privacy        CommunityPrivacy  @default(PUBLIC)
+  creatorId      String
+  creator        User              @relation("CommunityCreator", fields: [creatorId], references: [id])
+  members        CommunityMember[]
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+}
+
+model CommunityMember {
+  id          String     @id @default(cuid())
+  communityId String
+  userId      String
+  role        MemberRole @default(MEMBER)
+  joinedAt    DateTime   @default(now())
+  community   Community  @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  user        User       @relation("CommunityMemberships", fields: [userId], references: [id])
+
+  @@unique([communityId, userId])
+}
+
+enum MembershipType {
+  OPEN
+  INVITE
+}
+
+enum CommunityPrivacy {
+  PUBLIC
+  PRIVATE
+}
+
+enum MemberRole {
+  CREATOR
+  ADMIN
+  MEMBER
 }
